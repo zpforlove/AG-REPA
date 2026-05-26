@@ -1,0 +1,130 @@
+# Data configuration
+data:
+  # LibriSpeech dataset configuration
+  librispeech:
+    train_root: "/mnt/sdd/share/datasets/speech/Librispeech/train/train-all-960"       # Training data path
+    val_root: "/mnt/sdd/share/datasets/speech/Librispeech/dev/dev-all"                 # Validation data path
+    s3_token_dir: "speech_tokens"                                                      # Location where preprocessed S3 audio tokens are stored
+
+  # AudioSet dataset configuration
+  audioset:
+    train_root: "/mnt/sdd/share/datasets/speech/AudioSet/data/audio/unbal_train"       # Training data path
+    val_root: "/mnt/sdd/share/datasets/speech/AudioSet/data/audio/eval"                # Validation data path
+    file_dir: "/mnt/sdd/share/datasets/speech/AudioSet/data"                           # Location of AudioSet configuration files
+    desc_path: "/mnt/sdd/share/datasets/speech/AudioSet/audioset_description.jsonl"    # AudioSet description file
+
+  num_workers: 2                    # Number of processes per GPU allocated for loading data
+  pin_memory: true                  # Whether to share memory between processes
+
+# Path configuration
+paths:
+  # Path to the speaker encoder checkpoint
+  speaker_encoder_checkpoint: "speechbrain/spkrec-ecapa-voxceleb"
+  # BEATs Tokenizer model used to extract semantics
+  beats_tokenizer: "pretrained_models/Tokenizer_iter3_plus_AS2M.pt"
+  # BEATs Feature Extractor model used to extract timbre embedding vectors
+  beats_feature_extractor_checkpoint: "pretrained_models/BEATs_iter3_plus_AS2M.pt"
+  # Checkpoint save directory
+  checkpoint_dir: "checkpoints"
+  # Visualization output directory
+  output_dir: "outputs_cfm"
+
+# Dataset audio configuration
+audio:
+  sample_rate: 16000  # Sample rate
+  max_length: 160000  # Maximum audio length
+
+# Hyperparameter configuration
+hyperparameters:
+  ast: # AudioSet Token self-supervised training stage
+    input_dim: 768              # BEATs feature dimension
+    hidden_dim: 1024            # Hidden layer dimension
+    vocab_size: 4096            # Vocabulary size
+    num_epochs: 3               # Number of training epochs
+    losses:
+      reconstruction_loss_weight: 1.0   # Weight of the reconstruction loss
+      commit_loss_weight: 10.0          # Weight of the VQ commitment loss
+    optimizer:
+      weight_decay: 0.01          # Weight decay coefficient
+      betas: [ 0.9, 0.999 ]       # Beta parameters of the AdamW optimizer
+      scheduler:
+        max_lr: 0.0001            # Maximum learning rate of the OneCycleLR scheduler
+        pct_start: 0.1            # Percentage of total steps used to reach the maximum learning rate
+        div_factor: 10.0          # Initial learning rate = max_lr / div_factor
+        final_div_factor: 100.0   # Final learning rate = max_lr / (div_factor * final_div_factor)
+
+  llm: # LLM autoregressive model training stage
+    model_name: "Qwen/Qwen3-0.6B-Base"      # Base model selection
+    beats_vocab_size: 1024                  # BEATs token vocabulary size
+    s3_vocab_size: 4096                     # S3 semantic token vocabulary size
+    as_vocab_size: 4096                     # AudioSet vocabulary size
+    max_sequence_length: 8192               # Maximum context length of the LLM input sequence
+    gradient_checkpointing: true            # Enable gradient checkpointing
+    num_epochs: 3                           # Total number of training epochs
+    optimizer:
+      weight_decay: 0.1           # Weight decay coefficient
+      betas: [ 0.9, 0.999 ]       # Beta parameters of the AdamW optimizer
+      scheduler:
+        max_lr: 0.00005           # Maximum learning rate of the OneCycleLR scheduler
+        pct_start: 0.1            # Percentage of total steps used to reach the maximum learning rate
+        div_factor: 10.0          # Initial learning rate = max_lr / div_factor
+        final_div_factor: 100.0   # Final learning rate = max_lr / (div_factor * final_div_factor)
+
+  flow: # Flow Matching model training stage
+    mel_mean: -5.8843             # Global mean of the mel-spectrogram (used for normalization)
+    mel_std: 2.2615               # Global standard deviation of the mel-spectrogram (used for normalization)
+    beats_vocab_size: 1024        # BEATs token vocabulary size
+    s3_vocab_size: 4096           # S3 semantic token vocabulary size
+    as_vocab_size: 4096           # AudioSet vocabulary size
+    token_embedding_dim: 1024     # Embedding dimension of the S3/AudioSet tokens
+    hidden_dim: 1024              # DiT hidden layer dimension
+    n_heads: 16                   # Number of attention heads
+    n_layers: 24                  # Number of DiT layers
+    ff_mult: 4                    # Feed-forward network scaling factor
+    dropout: 0.2                  # Dropout probability
+    drop_ref_prob: 0.1            # Probability of dropping the reference mel during training
+    sigma: 0.5                    # Noise scale coefficient
+    cond_drop_prob: 0.1           # Proportion of unconditional samples for CFG
+    n_timesteps: 32               # Number of timesteps at inference
+    cfg_scale: 3.0                # CFG weight at inference
+    sway_coef: -1.0               # Sway sampling coefficient at inference
+    num_epochs: 3                 # Total number of training epochs
+    optimizer:
+      weight_decay: 0.1           # Weight decay coefficient
+      betas: [ 0.9, 0.999 ]       # Beta parameters of the AdamW optimizer
+      scheduler:
+        max_lr: 0.0001            # Maximum learning rate of the OneCycleLR scheduler
+        pct_start: 0.1            # Percentage of total steps used to reach the maximum learning rate
+        div_factor: 10.0          # Initial learning rate = max_lr / div_factor
+        final_div_factor: 100.0   # Final learning rate = max_lr / final_div_factor
+
+# Vocoder configuration
+vocos:
+  # Output sample rate configuration
+  sample_rate: 24000   # Sample rate required by the Vocos model
+  # Resampling parameters
+  resample:
+    method: "sinc_interp_kaiser"   # Resampling method (e.g., sinc interpolation with a Kaiser window)
+    lowpass_filter_width: 6        # Lowpass filter width, used during resampling
+    rolloff: 0.99                  # Rolloff coefficient, controls the steepness of the resampling filter transition band
+  # Mel-spectrogram parameters
+  mel:
+    n_fft: 1024         # Window size of the Fast Fourier Transform (FFT)
+    hop_length: 256     # Hop length, the number of samples between adjacent frames
+    win_length: 1024    # Window length, the size of the analysis window used for the STFT (Short-Time Fourier Transform)
+    n_mels: 100         # Number of mel filterbanks, determines the dimensionality of the mel-spectrogram
+    f_min: 0.0          # Minimum frequency of the mel filterbanks
+    f_max: 12000        # Maximum frequency of the mel filterbanks
+    center: true        # Whether to align the window center with the frame center
+    power: 1.0          # Exponent of the power spectrogram (1.0 for the magnitude spectrogram, 2.0 for the power spectrogram)
+
+# Logging configuration
+logging:
+  wandb:
+    project: "REPA_dual"  # wandb project name
+    name: "world-voice"  # Experiment name
+    enabled: true  # Whether to enable wandb
+  console:
+    level: "INFO"  # Log level
+    format: "%(asctime)s [%(levelname)s] %(message)s"  # Log format
+    to_file: false  # Whether to write output to a file

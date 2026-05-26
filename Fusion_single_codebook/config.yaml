@@ -1,0 +1,141 @@
+# Data configuration
+data:
+  # LibriSpeech dataset configuration
+  librispeech:
+    train_root: "/mnt/data/Librispeech/train/train-all-960"       # Training data path
+    val_root: "/mnt/data/Librispeech/dev/dev-all"                 # Validation data path
+    s3_token_dir: "speech_tokens"                                                      # Location of the preprocessed S3 audio tokens
+
+  # AudioSet dataset configuration
+  audioset:
+    train_root: "/mnt/data/AudioSet/data/audio/unbal_train"       # Training data path
+    val_root: "/mnt/data/AudioSet/data/audio/eval"                # Validation data path
+    file_dir: "/mnt/data/AudioSet/data"                           # Location of the AudioSet configuration files
+    desc_path: "/mnt/data/AudioSet/audioset_description.jsonl"    # AudioSet description file
+
+  num_workers: 2                    # Number of data-loading processes allocated per GPU
+  pin_memory: true                  # Whether to share memory across processes
+
+# Path configuration
+paths:
+  # Speaker encoder checkpoint path
+  speaker_encoder_checkpoint: "speechbrain/spkrec-ecapa-voxceleb"
+  # BEATs Feature Extractor model used to extract timbre embedding vectors
+  beats_feature_extractor_checkpoint: "pretrained_models/BEATs_iter3_plus_AS2M.pt"
+  # Checkpoint save directory
+  checkpoint_dir: "checkpoints"
+  # Visualization output directory
+  output_dir: "outputs_cfm"
+
+# Dataset audio configuration
+audio:
+  sample_rate: 16000  # Sample rate
+  max_length: 160000  # Maximum audio length
+
+# Hyperparameter configuration
+hyperparameters:
+  ast: # AudioSet token self-supervised training stage
+    input_dim: 768              # BEATs feature dimension
+    hidden_dim: 1024            # Hidden layer dimension
+    vocab_size: 4096            # Vocabulary size
+    num_epochs: 3               # Number of training epochs
+    losses:
+      reconstruction_loss_weight: 1.0   # Weight of the reconstruction loss
+      commit_loss_weight: 10.0          # Weight of the VQ commitment loss
+    optimizer:
+      weight_decay: 0.01          # Weight decay coefficient
+      betas: [ 0.9, 0.999 ]       # Beta parameters of the AdamW optimizer
+      scheduler:
+        max_lr: 0.0001            # Maximum learning rate of the OneCycleLR scheduler
+        pct_start: 0.1            # Percentage of total steps spent reaching the maximum learning rate
+        div_factor: 10.0          # Initial learning rate = max_lr / div_factor
+        final_div_factor: 100.0   # Final learning rate = max_lr / (div_factor * final_div_factor)
+
+  llm:
+    model_name: "Qwen/Qwen3-0.6B-Base"        # Name of the pretrained base model
+    s3_vocab_size: 4096                       # S3 semantic codebook size
+    as_vocab_size: 4096                       # Audio discrete-code (AudioSet/AST) vocabulary size
+    max_sequence_length: 8192                 # Maximum context length (prompt + style placeholders + target tokens)
+    gradient_checkpointing: true              # Enable gradient checkpointing to save GPU memory
+    num_epochs: 5                             # Number of training epochs
+
+    # ====== Style prefix (reference-audio embedding projection) ======
+    style_num_tokens: 16                      # Number of [AUDIO_i] placeholders used in the prompt (K); larger K captures finer style
+    style_strength: 0.5                       # Style injection strength alpha in [0,1]; 0=text only, 1=full style
+    style_dropout_p: 0.5                      # During training, set alpha to 0 with this probability (CFG style-free branch) to improve text controllability
+
+    # ====== coarse -> fine auxiliary head (affects training loss only; does not change the inference interface) ======
+    coarse_num_clusters: 128                  # Number of coarse clusters C into which the 4096 codewords are grouped; commonly 64/128/256
+    coarse_loss_weight: 0.5                   # Auxiliary loss weight lambda; total loss = LM + lambda*coarse, recommended 0.2~0.6
+    coarse_code_to_cluster_path: null         # JSON path mapping codeword -> cluster ID; uses uniform bucketing when null
+
+    optimizer:
+      weight_decay: 0.1                       # AdamW weight decay; mitigates overfitting, commonly 0.01~0.1
+      betas: [ 0.9, 0.999 ]                   # AdamW momentum parameters beta1/beta2; defaults are stable
+      scheduler:
+        max_lr: 0.00005                       # Peak learning rate; 0.6B can start from 5e-5, fine-tune per batch/GPU memory
+        pct_start: 0.1                        # Warmup ratio; ramp up to the maximum learning rate over the first 10% of steps
+        div_factor: 10.0                      # Initial learning rate ratio: lr_start = max_lr / div_factor
+        final_div_factor: 100.0               # Final learning rate ratio: lr_final = max_lr / (div_factor * final_div_factor)
+
+  flow: # Flow Matching model training stage
+    loss_weights:
+      teacher_speech: 0.5         # LibriSpeech->Whisper distillation weight
+      teacher_audio: 1.0          # AudioSet->BEATs distillation weight
+    enable_whitebox_probe: true   # Whether to enable the white-box probe
+    s3_vocab_size: 4096           # S3 semantic-token vocabulary size
+    as_vocab_size: 4096           # AudioSet vocabulary size
+    token_embedding_dim: 1024     # Embedding dimension of the S3/AudioSet tokens
+    mel_mean: -5.8843             # Global mean of the mel-spectrogram (used for normalization)
+    mel_std: 2.2615               # Global standard deviation of the mel-spectrogram (used for normalization)
+    hidden_dim: 1024              # DiT hidden layer dimension
+    n_heads: 16                   # Number of attention heads
+    n_layers: 24                  # Number of DiT layers
+    ff_mult: 4                    # Feed-forward network scaling factor
+    dropout: 0.2                  # Dropout probability
+    drop_ref_prob: 0.1            # Drop the reference mel for 10% of training samples
+    sigma: 0.5                    # Noise scale coefficient (controls the noise strength)
+    cond_drop_prob: 0.1           # Fraction of CFG unconditional samples
+    n_timesteps: 32               # Timesteps at the inference stage
+    cfg_scale: 3.0                # CFG weight at the inference stage
+    sway_coef: -1.0               # Sway-sampling coefficient at the inference stage
+    num_epochs: 3                 # Total number of training epochs
+    optimizer:
+      weight_decay: 0.1           # Weight decay coefficient
+      betas: [ 0.9, 0.999 ]       # Beta parameters of the AdamW optimizer
+      scheduler:
+        max_lr: 0.0001            # Maximum learning rate of the OneCycleLR scheduler
+        pct_start: 0.1            # Percentage of total steps spent reaching the maximum learning rate
+        div_factor: 10.0          # Initial learning rate = max_lr / div_factor
+        final_div_factor: 100.0   # Final learning rate = max_lr / final_div_factor
+
+# Vocoder configuration
+vocos:
+  # Output sample-rate configuration
+  sample_rate: 24000   # Sample rate required by the Vocos model
+  # Resampling parameters
+  resample:
+    method: "sinc_interp_kaiser"   # Resampling method (e.g., sinc interpolation with a Kaiser window)
+    lowpass_filter_width: 6        # Low-pass filter width, used during resampling
+    rolloff: 0.99                  # Rolloff coefficient, controlling the steepness of the resampling filter's transition band
+  # Mel-spectrogram parameters
+  mel:
+    n_fft: 1024         # Window size of the Fast Fourier Transform (FFT)
+    hop_length: 256     # Hop length, the number of samples between adjacent frames
+    win_length: 1024    # Window length, the analysis window size used for the STFT (Short-Time Fourier Transform)
+    n_mels: 100         # Number of mel filterbanks, determining the dimension of the mel-spectrogram
+    f_min: 0.0          # Lowest frequency of the mel filterbank
+    f_max: 12000        # Highest frequency of the mel filterbank
+    center: true        # Whether to align the window center with the frame center
+    power: 1.0          # Exponent of the power spectrum (1.0 means magnitude spectrum, 2.0 means power spectrum)
+
+# Logging configuration
+logging:
+  wandb:
+    project: "worldvoice_single"  # wandb project name
+    name: "world-voice"  # Experiment name
+    enabled: true  # Whether to enable wandb
+  console:
+    level: "INFO"  # Logging level
+    format: "%(asctime)s [%(levelname)s] %(message)s"  # Log format
+    to_file: false  # Whether to write output to a file

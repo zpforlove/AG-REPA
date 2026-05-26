@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# IDE / OS
+.idea/
+.vscode/
+.pytest_cache/
+.DS_Store
+
+# Model weights & training artifacts (released separately as AG-REPA-Model)
+checkpoints/
+pretrained_models/
+speech_tokens/
+wandb/
+outputs_cfm/
+output/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.ckpt
+
+# Large data
+*.jsonl
+audioset_description.jsonl

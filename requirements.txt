@@ -1,0 +1,37 @@
+# Core deep-learning stack
+torch>=2.1.0
+torchaudio>=2.1.0
+deepspeed>=0.12.0
+transformers>=4.44.0
+torchdiffeq>=0.2.3
+
+# Audio / signal processing
+librosa>=0.10.0
+soundfile>=0.12.1
+vocos>=0.1.0                 # neural vocoder (mel -> waveform)
+openai-whisper>=20231117     # Whisper semantic teacher (Stage-2 BiT-C / REPA)
+faster-whisper>=1.0.0        # used by the TTS inference WER check
+onnxruntime-gpu>=1.16.0      # CosyVoice S3 tokenizer / speaker encoder (.onnx)
+
+# Numerics / data
+numpy>=1.24.0
+pandas>=2.0.0
+pyyaml>=6.0
+
+# Captioning / quantization (data preparation, optional)
+bitsandbytes>=0.43.0         # 4-bit loading for MiDashengLM in generate_descriptions.py
+pysbd>=0.3.4                 # sentence boundary detection (TTS inference)
+
+# Logging / utilities / plotting
+wandb>=0.16.0
+tqdm>=4.66.0
+matplotlib>=3.7.0
+
+# Speaker embedding teacher (referenced via speechbrain/spkrec-ecapa-voxceleb)
+speechbrain>=1.0.0
+
+# NOTE:
+#  - The BEATs encoder, RepCodec and CosyVoice are vendored under each variant
+#    directory (beats/, repcodec/, cosyvoice/) and do not need pip installation.
+#  - CosyVoice text frontend additionally needs the `ttsfrd` wheels shipped with
+#    the CosyVoice-ttsfrd model package (see the AG-REPA-Model release).
