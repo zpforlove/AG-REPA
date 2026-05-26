@@ -16,7 +16,7 @@ introduced in the paper.
 
 The pre-trained weights and diagnostic artifacts are released on Hugging Face:
 **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**. This GitHub
-repository is *code only* - no checkpoints or datasets are included. (The frozen
+repository is *code only* — no checkpoints or datasets are included. (The frozen
 third-party base models — BEATs, CosyVoice — are downloaded from their original sources;
 see the model card.)
 
