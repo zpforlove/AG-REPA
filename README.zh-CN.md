@@ -277,8 +277,11 @@ python inference_tta.py \
 └── checkpoints/
     ├── ast/                  ←  AG-REPA-Model/audioset_tokenizer/
     ├── llm/                  ←  AG-REPA-Model/llm/<single|dual>_codebook/
-    └── flow/                 ←  AG-REPA-Model/flow_matching/<baseline|agrepa>_<single|dual>_codebook/
+    └── flow/                 ←  AG-REPA-Model/flow_matching/agrepa_<single|dual>_codebook/
 ```
+
+> Hugging Face 发布包仅含**最终 AG-REPA** 检查点(`agrepa_*`,对应 `REPA_*` 变体)。无对齐
+> 基线与 FoG-A/LASP 诊断产物未打包——可通过训练 `Fusion_*` 变体从本代码生成。
 
 示例:
 

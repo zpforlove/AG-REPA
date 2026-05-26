@@ -298,8 +298,12 @@ AG-REPA-Model`) and download the base models from their upstream sources. The co
 └── checkpoints/
     ├── ast/                  ←  AG-REPA-Model/audioset_tokenizer/
     ├── llm/                  ←  AG-REPA-Model/llm/<single|dual>_codebook/
-    └── flow/                 ←  AG-REPA-Model/flow_matching/<baseline|agrepa>_<single|dual>_codebook/
+    └── flow/                 ←  AG-REPA-Model/flow_matching/agrepa_<single|dual>_codebook/
 ```
+
+> The Hugging Face release ships only the **final AG-REPA** checkpoints (`agrepa_*`, the
+> `REPA_*` variants). The no-alignment baselines and FoG-A/LASP diagnostics are not bundled
+> — produce them by training the `Fusion_*` variants from this code.
 
 Example:
 
