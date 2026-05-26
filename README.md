@@ -22,6 +22,28 @@ see the model card.)
 
 ---
 
+## 🔊 Audio samples — AG-REPA vs. baseline (single codebook, 1 epoch)
+
+To make AG-REPA's effect audible, the clips below were synthesized by models trained for
+**only a single epoch** on the **single main codebook** (Config A) — one *without* AG-REPA
+(the baseline) and one *with* AG-REPA, with everything else held identical. After just one
+epoch the AG-REPA model already produces noticeably clearer, more stable audio, while the
+baseline is still noisy and under-converged — a direct, audible illustration of AG-REPA
+**accelerating training and stabilising output quality**.
+
+| Task | ❌ Baseline — no AG-REPA (1 epoch) | ✅ AG-REPA (1 epoch) |
+|------|------------------------------------|----------------------|
+| **TTS** — zero-shot speech | [▶︎ tts_no_agrepa.wav](assets/audio/tts_no_agrepa.wav) | [▶︎ tts_agrepa.wav](assets/audio/tts_agrepa.wav) |
+| **TTA** — general audio | [▶︎ tta_no_agrepa.wav](assets/audio/tta_no_agrepa.wav) | [▶︎ tta_agrepa.wav](assets/audio/tta_agrepa.wav) |
+
+> Click a clip to open GitHub's built-in audio player (or right-click → *Save link as…* to
+> download). 24 kHz mono WAV, ~10 s each. These are **one-epoch, single-codebook** samples
+> meant to show *early-training* convergence — not the final model quality; for fully
+> trained outputs see the [paper](https://icml.cc/virtual/2026/poster/65899) and the
+> [🤗 model card](https://huggingface.co/AustinZhang/AG-REPA).
+
+---
+
 ## 1. What problem does AG-REPA solve?
 
 REPresentation Alignment (REPA) accelerates the training of generative Flow-Matching (FM)

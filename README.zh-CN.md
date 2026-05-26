@@ -20,6 +20,25 @@ Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**�
 
 ---
 
+## 🔊 音频示例 —— AG-REPA 使用前后对比(单主码本,仅 1 个 Epoch)
+
+为了让 AG-REPA 的效果"听得见",下面的音频均由**仅训练 1 个 Epoch**、且**只用单个主码本**
+(配置 A)的模型合成——一个**不用** AG-REPA(基线),一个**使用** AG-REPA,其余设置完全相同。
+仅一个 Epoch 后,AG-REPA 模型就已经能合成明显更清晰、更稳定的音频,而基线仍嘈杂、欠收敛
+——直观体现 AG-REPA **加速训练、稳定音质**的作用。
+
+| 任务 | ❌ 基线 —— 无 AG-REPA(1 Epoch) | ✅ AG-REPA(1 Epoch) |
+|------|------------------------------------|----------------------|
+| **TTS** —— 零样本语音 | [▶︎ tts_no_agrepa.wav](assets/audio/tts_no_agrepa.wav) | [▶︎ tts_agrepa.wav](assets/audio/tts_agrepa.wav) |
+| **TTA** —— 通用音频 | [▶︎ tta_no_agrepa.wav](assets/audio/tta_no_agrepa.wav) | [▶︎ tta_agrepa.wav](assets/audio/tta_agrepa.wav) |
+
+> 点击音频会打开 GitHub 内置播放器(或右键 → *链接另存为…* 下载)。24 kHz 单声道 WAV,各约 10 秒。
+> 这些是**单码本、仅 1 个 Epoch**的样本,用于展示*训练早期*的收敛差异,并非最终模型音质;
+> 完整训练效果见[论文](https://icml.cc/virtual/2026/poster/65899)与
+> [🤗 模型卡](https://huggingface.co/AustinZhang/AG-REPA)。
+
+---
+
 ## 1. AG-REPA 要解决什么问题?
 
 表征对齐(REPresentation Alignment,REPA)通过将生成式流匹配(FM)模型的中间隐藏状态与
