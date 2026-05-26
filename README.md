@@ -14,9 +14,11 @@ audio-generation framework that performs both **Text-to-Speech (TTS)** and
 interpretability toolkit (**BiT-C / LASP / FoG-A**) and the **AG-REPA** training strategy
 introduced in the paper.
 
-The pre-trained weights, diagnostic artifacts, and base models live in a **separate
-release**: [`AG-REPA-Model`](../AG-REPA-Model). This directory is *code only* — no
-checkpoints or datasets are included.
+The pre-trained weights and diagnostic artifacts are released on Hugging Face:
+**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**. This GitHub
+repository is *code only* — no checkpoints or datasets are included. (The frozen
+third-party base models — BEATs, CosyVoice — are downloaded from their original sources;
+see the model card.)
 
 ---
 
@@ -181,12 +183,13 @@ conda activate agrepa
 pip install -r requirements.txt
 
 # CosyVoice text frontend (optional, only for TTS inference with text normalisation):
-# install the ttsfrd wheels shipped in the AG-REPA-Model release under
-# pretrained_base_models/CosyVoice-ttsfrd/.
+# install the ttsfrd wheels shipped with the CosyVoice-ttsfrd model package
+# (https://www.modelscope.cn/models/iic/CosyVoice-ttsfrd).
 ```
 
-Then make the pre-trained weights available — see [`AG-REPA-Model`](../AG-REPA-Model) and
-§9 below for the expected directory layout.
+Then make the pre-trained weights available — download them from the Hugging Face model
+repo **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)** and wire them
+in per §9 below.
 
 ---
 
@@ -282,12 +285,13 @@ python inference_tta.py \
 
 ## 9. Wiring the model weights to the code
 
-The code expects, **per variant directory**, the following sub-folders (provided in the
-[`AG-REPA-Model`](../AG-REPA-Model) release). Symlink or copy them in:
+Download the weights from Hugging Face (`hf download AustinZhang/AG-REPA --local-dir
+AG-REPA-Model`) and download the base models from their upstream sources. The code expects,
+**per variant directory**, the following sub-folders — symlink or copy them in:
 
 ```
 <variant>/
-├── pretrained_models/        ←  AG-REPA-Model/pretrained_base_models/
+├── pretrained_models/        ←  BEATs + CosyVoice (download from upstream — see model card)
 │   ├── BEATs_iter3_plus_AS2M.pt
 │   ├── CosyVoice-300M/
 │   └── CosyVoice-ttsfrd/
@@ -301,14 +305,15 @@ Example:
 
 ```bash
 cd REPA_single_codebook
-ln -s ../../AG-REPA-Model/pretrained_base_models                 pretrained_models
+ln -s /path/to/pretrained_base_models                            pretrained_models
 mkdir -p checkpoints
-ln -s ../../AG-REPA-Model/audioset_tokenizer                     checkpoints/ast
-ln -s ../../AG-REPA-Model/llm/single_codebook                    checkpoints/llm
-ln -s ../../AG-REPA-Model/flow_matching/agrepa_single_codebook   checkpoints/flow
+ln -s /path/to/AG-REPA-Model/audioset_tokenizer                  checkpoints/ast
+ln -s /path/to/AG-REPA-Model/llm/single_codebook                 checkpoints/llm
+ln -s /path/to/AG-REPA-Model/flow_matching/agrepa_single_codebook checkpoints/flow
 ```
 
-See [`AG-REPA-Model/README.md`](../AG-REPA-Model/README.md) for the full mapping table.
+See the [🤗 model card](https://huggingface.co/AustinZhang/AG-REPA) for the full mapping
+table and base-model download links.
 
 ---
 

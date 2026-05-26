@@ -13,8 +13,10 @@
 Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**合成;此外还包含论文中
 提出的可解释性工具集(**BiT-C / LASP / FoG-A**)以及 **AG-REPA** 训练策略。
 
-预训练权重、诊断产物与基础模型存放在**独立发布包**中:
-[`AG-REPA-Model`](../AG-REPA-Model)。本目录**仅含代码**——不包含任何检查点或数据集。
+预训练权重与诊断产物发布在 Hugging Face:
+**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**。本 GitHub 仓库
+**仅含代码**——不包含任何检查点或数据集。(冻结的第三方基础模型 —— BEATs、CosyVoice ——
+需从各自原始来源下载,详见模型卡。)
 
 ---
 
@@ -165,10 +167,12 @@ conda activate agrepa
 pip install -r requirements.txt
 
 # CosyVoice 文本前端(可选,仅在做带文本归一化的 TTS 推理时需要):
-# 安装 AG-REPA-Model 发布包中 pretrained_base_models/CosyVoice-ttsfrd/ 下的 ttsfrd wheel。
+# 安装 CosyVoice-ttsfrd 模型包附带的 ttsfrd wheel
+# (https://www.modelscope.cn/models/iic/CosyVoice-ttsfrd)。
 ```
 
-随后准备好预训练权重——见 [`AG-REPA-Model`](../AG-REPA-Model) 以及下文 §9 中要求的目录布局。
+随后准备好预训练权重——从 Hugging Face 模型仓库
+**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)** 下载,并按下文 §9 接入。
 
 ---
 
@@ -261,12 +265,12 @@ python inference_tta.py \
 
 ## 9. 将模型权重与代码对接
 
-代码在**每个变体目录下**期望存在以下子目录(由 [`AG-REPA-Model`](../AG-REPA-Model) 发布包
-提供)。用软链接或复制方式接入:
+从 Hugging Face 下载权重(`hf download AustinZhang/AG-REPA --local-dir AG-REPA-Model`),
+并从上游来源下载基础模型。代码在**每个变体目录下**期望存在以下子目录——用软链接或复制方式接入:
 
 ```
 <变体>/
-├── pretrained_models/        ←  AG-REPA-Model/pretrained_base_models/
+├── pretrained_models/        ←  BEATs + CosyVoice(从上游下载 —— 详见模型卡)
 │   ├── BEATs_iter3_plus_AS2M.pt
 │   ├── CosyVoice-300M/
 │   └── CosyVoice-ttsfrd/
@@ -280,14 +284,14 @@ python inference_tta.py \
 
 ```bash
 cd REPA_single_codebook
-ln -s ../../AG-REPA-Model/pretrained_base_models                 pretrained_models
+ln -s /path/to/pretrained_base_models                            pretrained_models
 mkdir -p checkpoints
-ln -s ../../AG-REPA-Model/audioset_tokenizer                     checkpoints/ast
-ln -s ../../AG-REPA-Model/llm/single_codebook                    checkpoints/llm
-ln -s ../../AG-REPA-Model/flow_matching/agrepa_single_codebook   checkpoints/flow
+ln -s /path/to/AG-REPA-Model/audioset_tokenizer                  checkpoints/ast
+ln -s /path/to/AG-REPA-Model/llm/single_codebook                 checkpoints/llm
+ln -s /path/to/AG-REPA-Model/flow_matching/agrepa_single_codebook checkpoints/flow
 ```
 
-完整映射表见 [`AG-REPA-Model/README.zh-CN.md`](../AG-REPA-Model/README.zh-CN.md)。
+完整映射表与基础模型下载链接见 [🤗 模型卡](https://huggingface.co/AustinZhang/AG-REPA)。
 
 ---
 
