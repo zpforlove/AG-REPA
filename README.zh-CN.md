@@ -27,13 +27,28 @@ Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**�
 仅一个 Epoch 后,AG-REPA 模型就已经能合成明显更清晰、更稳定的音频,而基线仍嘈杂、欠收敛
 ——直观体现 AG-REPA **加速训练、稳定音质**的作用。
 
-| 任务 | ❌ 基线 —— 无 AG-REPA(1 Epoch) | ✅ AG-REPA(1 Epoch) |
-|------|------------------------------------|----------------------|
-| **TTS** —— 零样本语音 | [▶︎ tts_no_agrepa.wav](assets/audio/tts_no_agrepa.wav) | [▶︎ tts_agrepa.wav](assets/audio/tts_agrepa.wav) |
-| **TTA** —— 通用音频 | [▶︎ tta_no_agrepa.wav](assets/audio/tta_no_agrepa.wav) | [▶︎ tta_agrepa.wav](assets/audio/tta_agrepa.wav) |
+<table>
+  <tr>
+    <th>任务</th>
+    <th>❌ 基线 —— 无 AG-REPA(1 Epoch)</th>
+    <th>✅ AG-REPA(1 Epoch)</th>
+  </tr>
+  <tr>
+    <td align="center"><b>TTS</b><br/><sub>零样本语音</sub></td>
+    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tts_no_agrepa.mp4" controls width="320"></video></td>
+    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tts_agrepa.mp4" controls width="320"></video></td>
+  </tr>
+  <tr>
+    <td align="center"><b>TTA</b><br/><sub>通用音频</sub></td>
+    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tta_no_agrepa.mp4" controls width="320"></video></td>
+    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tta_agrepa.mp4" controls width="320"></video></td>
+  </tr>
+</table>
 
-> 点击音频会打开 GitHub 内置播放器(或右键 → *链接另存为…* 下载)。24 kHz 单声道 WAV,各约 10 秒。
-> 这些是**单码本、仅 1 个 Epoch**的样本,用于展示*训练早期*的收敛差异,并非最终模型音质;
+> ▶ 上方是短**波形视频**(音频在 GitHub 页面内**直接播放**——点播放即可,无需下载)。它们是
+> **单码本、仅 1 个 Epoch**的样本,展示*训练早期*的收敛差异,并非最终模型音质。无损 WAV 下载:
+> TTS [基线](assets/audio/tts_no_agrepa.wav) / [AG-REPA](assets/audio/tts_agrepa.wav) ·
+> TTA [基线](assets/audio/tta_no_agrepa.wav) / [AG-REPA](assets/audio/tta_agrepa.wav)。
 > 完整训练效果见[论文](https://icml.cc/virtual/2026/poster/65899)与
 > [🤗 模型卡](https://huggingface.co/AustinZhang/AG-REPA)。
 
