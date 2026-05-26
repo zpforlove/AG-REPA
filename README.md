@@ -31,31 +31,34 @@ epoch the AG-REPA model already produces noticeably clearer, more stable audio, 
 baseline is still noisy and under-converged — a direct, audible illustration of AG-REPA
 **accelerating training and stabilising output quality**.
 
-<table>
-  <tr>
-    <th>Task</th>
-    <th>❌ Baseline — no AG-REPA (1 epoch)</th>
-    <th>✅ AG-REPA (1 epoch)</th>
-  </tr>
-  <tr>
-    <td align="center"><b>TTS</b><br/><sub>zero-shot speech</sub></td>
-    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tts_no_agrepa.mp4" controls width="320"></video></td>
-    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tts_agrepa.mp4" controls width="320"></video></td>
-  </tr>
-  <tr>
-    <td align="center"><b>TTA</b><br/><sub>general audio</sub></td>
-    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tta_no_agrepa.mp4" controls width="320"></video></td>
-    <td><video src="https://github.com/zpforlove/AG-REPA/raw/main/assets/audio/tta_agrepa.mp4" controls width="320"></video></td>
-  </tr>
-</table>
+**🗣️ TTS — zero-shot speech**
 
-> ▶ The players above are short **waveform videos** (the audio plays inline on the GitHub
-> page — just press play, no download needed). They are **one-epoch, single-codebook**
-> samples showing *early-training* convergence, not the final model quality. Lossless WAVs:
-> TTS [baseline](assets/audio/tts_no_agrepa.wav) / [AG-REPA](assets/audio/tts_agrepa.wav) ·
+❌ *Baseline — no AG-REPA (1 epoch):*
+
+https://github.com/user-attachments/assets/9d084624-dc6d-4f13-98ae-95d5367aac3e
+
+✅ *AG-REPA (1 epoch):*
+
+https://github.com/user-attachments/assets/4844662d-aafb-489d-9b04-dcf62c8d03bb
+
+**🔊 TTA — general audio**
+
+❌ *Baseline — no AG-REPA (1 epoch):*
+
+https://github.com/user-attachments/assets/10fa3c94-8f70-4f89-a20b-13c734e6b1d3
+
+✅ *AG-REPA (1 epoch):*
+
+https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
+
+> ▶ The clips above play **inline on this page** — just press play, no download. They are
+> **one-epoch, single-codebook** samples showing *early-training* convergence (not final
+> quality): even after a single epoch, AG-REPA is already clearly cleaner and more stable
+> than the baseline. Lossless WAV copies: TTS
+> [baseline](assets/audio/tts_no_agrepa.wav) / [AG-REPA](assets/audio/tts_agrepa.wav) ·
 > TTA [baseline](assets/audio/tta_no_agrepa.wav) / [AG-REPA](assets/audio/tta_agrepa.wav).
-> For fully-trained quality see the [paper](https://icml.cc/virtual/2026/poster/65899) and
-> the [🤗 model card](https://huggingface.co/AustinZhang/AG-REPA).
+> Fully-trained quality: [paper](https://icml.cc/virtual/2026/poster/65899) ·
+> [🤗 model card](https://huggingface.co/AustinZhang/AG-REPA).
 
 ---
 
