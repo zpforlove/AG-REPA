@@ -6,7 +6,8 @@
 > *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.*
 > 国际机器学习大会(ICML)2026 论文集。
 
-> 🌐 语言:[English](README.md) | **简体中文**
+> 📄 **论文与海报:** [ICML 2026 Virtual](https://icml.cc/virtual/2026/poster/65899)
+> &nbsp;|&nbsp; 🌐 **语言:** [English](README.md) | 简体中文
 
 本仓库包含一个统一音频生成框架的**训练、诊断与推理代码**——该框架用单个流匹配(Flow
 Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**合成;此外还包含论文中
@@ -48,6 +49,11 @@ Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**�
 | **LASP**(共享投影下的逐层分析) | *每一层"知道"什么?* | 通过单个冻结的共享投影头,度量每层池化表征与教师的余弦相似度(存储 / "Cos-SEM"、"Cos-EVT")。 |
 | **FoG-A**(仅前向门控消融,Forward-only Gate Ablation) | *每一层"用"了什么?* | 关闭某层的残差贡献后,预测速度场的归一化变化量(贡献)。 |
 
+<p align="center">
+  <img src="assets/methodology_bitc_lasp.png" width="92%" alt="BiT-C 双教师监督与 LASP 共享投影逐层分析">
+</p>
+<p align="center"><sub><b>诊断表征存储。</b>(a)<b>BiT-C</b> 将条件接口锚定到冻结的 <b>Whisper</b>(语义)与 <b>BEATs</b>(声学)教师;(b)<b>LASP</b> 通过把每一层投影到共享教师空间并度量余弦相似度,探查"每一层知道什么"。</sub></p>
+
 随后,**AG-REPA**(i)按 FoG-A 因果归因排序,选出 **Top-K** 层;(ii)为每个被选中的层
 挂接一个轻量级逐层 MLP 投影头,并赋予**与归因成正比的权重** `λ_k ∝ FoG-A_k`,只在因果上
 真正重要的位置施加对齐损失。本发布中 `K = 3`,探针选出的层为:
@@ -57,11 +63,23 @@ Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**�
 
 (这与论文表 1 / 公式 11 完全一致,并被硬编码在 `REPA_*/models.py` 中。)
 
+<p align="center">
+  <img src="assets/methodology_foga_agrepa.png" width="80%" alt="FoG-A 因果归因与 AG-REPA 的定向对齐目标">
+</p>
+<p align="center"><sub><b>从因果归因到优化。</b>(a)<b>FoG-A</b> 关闭每一层的残差贡献,度量速度场由此产生的变化,生成因果重要性图(红色 = 高贡献)。(b)<b>AG-REPA</b> <em>仅</em>对 Top-K 个因果关键层施加对齐监督,每层经由一个按其归因分数 <code>λ_k</code> 加权的投影头。</sub></p>
+
 ---
 
 ## 3. 系统架构
 
 采用两阶段级联结构,将高层语义规划与低层声学渲染解耦(对应论文附录 A):
+
+<p align="center">
+  <img src="assets/framework.png" width="100%" alt="统一音频生成框架:Token 化、阶段 1 自回归 LLM、阶段 2 流匹配">
+</p>
+<p align="center"><sub><b>统一音频生成框架。</b>(a)按领域划分的 Token 化产生统一的离散序列(语音用 S³ token,音频用 AudioSet token,可选地与 BEATs token 交织);(b)阶段 1 自回归 LLM 在参考风格注入下预测目标声学 token;(c)阶段 2 DiT 流匹配模型合成梅尔谱,再由 Vocos 声码器解码为波形。</sub></p>
+
+同一流程的文字示意图:
 
 ```
                  ┌──────────────────── 阶段 1:自回归 LLM ───────────────────┐

@@ -5,7 +5,8 @@
 > *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.*
 > Proceedings of the International Conference on Machine Learning (ICML) 2026.
 
-> 🌐 Language: **English** | [简体中文](README.zh-CN.md)
+> 📄 **Paper & poster:** [ICML 2026 Virtual](https://icml.cc/virtual/2026/poster/65899)
+> &nbsp;|&nbsp; 🌐 **Language:** English | [简体中文](README.zh-CN.md)
 
 This repository contains the **training, diagnostic, and inference code** for a unified
 audio-generation framework that performs both **Text-to-Speech (TTS)** and
@@ -55,6 +56,11 @@ CosyVoice, and F5-TTS architectures.
 | **LASP** (Layer-wise Analysis via Shared Projection) | *What does each layer **know**?* | Cosine similarity of every layer's pooled representation to the teacher, through a single frozen shared projection head (Store / "Cos-SEM", "Cos-EVT"). |
 | **FoG-A** (Forward-only Gate Ablation) | *What does each layer **use**?* | Normalised change in the predicted velocity field when a layer's residual contribution is gated off (Contribute). |
 
+<p align="center">
+  <img src="assets/methodology_bitc_lasp.png" width="92%" alt="BiT-C dual-teacher supervision and LASP layer-wise shared-projection analysis">
+</p>
+<p align="center"><sub><b>Diagnosing representation storage.</b> (a) <b>BiT-C</b> anchors the conditioning interface to frozen <b>Whisper</b> (semantic) and <b>BEATs</b> (acoustic) teachers; (b) <b>LASP</b> probes "what each layer knows" by projecting every layer into a shared teacher space and measuring cosine similarity.</sub></p>
+
 **AG-REPA** then (i) selects the **Top-K** layers ranked by FoG-A causal attribution and
 (ii) attaches a lightweight per-layer MLP projection head with an
 **attribution-proportional weight** `λ_k ∝ FoG-A_k`, applying the alignment loss only
@@ -66,12 +72,24 @@ where it causally matters. In this release `K = 3`, with the layers found by the
 (These exactly match Table 1 / Equation 11 of the paper and are hard-coded in
 `REPA_*/models.py`.)
 
+<p align="center">
+  <img src="assets/methodology_foga_agrepa.png" width="80%" alt="FoG-A causal attribution and the AG-REPA targeted alignment objective">
+</p>
+<p align="center"><sub><b>From causal attribution to optimization.</b> (a) <b>FoG-A</b> gates off each layer's residual contribution and measures the induced change in the velocity field, producing a causal-importance map (red = high contribution). (b) <b>AG-REPA</b> applies alignment supervision <em>only</em> to the Top-K causally critical layers, each through a projection head weighted by its attribution score <code>λ_k</code>.</sub></p>
+
 ---
 
 ## 3. System architecture
 
 A two-stage cascade decouples high-level semantic planning from low-level acoustic
 rendering (Appendix A of the paper):
+
+<p align="center">
+  <img src="assets/framework.png" width="100%" alt="The unified audio generation framework: tokenization, Stage-1 autoregressive LLM, and Stage-2 Flow Matching">
+</p>
+<p align="center"><sub><b>The unified audio generation framework.</b> (a) Domain-specific tokenization produces a unified discrete sequence (S³ tokens for speech, AudioSet tokens for audio, optionally interleaved with BEATs tokens); (b) a Stage-1 autoregressive LLM predicts the target acoustic tokens with reference-style injection; (c) a Stage-2 DiT Flow-Matching model synthesizes the mel-spectrogram, decoded to a waveform by the Vocos vocoder.</sub></p>
+
+The same pipeline as a text schematic:
 
 ```
                  ┌──────────────────── Stage 1: Autoregressive LLM ───────────────────┐
