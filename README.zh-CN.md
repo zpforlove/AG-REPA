@@ -3,29 +3,31 @@
 > 论文官方代码发布
 > **《AG-REPA: Causal Layer Selection for Representation Alignment in Audio Flow Matching》**
 > (《AG-REPA:面向音频流匹配中表征对齐的因果层选择》)
-> *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.*
-> 国际机器学习大会(ICML)2026 论文集。
+> *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.* —— ICML 2026。
 
 > 📄 **论文与海报:** [ICML 2026 Virtual](https://icml.cc/virtual/2026/poster/65899)
 > &nbsp;|&nbsp; 🌐 **语言:** [English](README.md) | 简体中文
 
-本仓库包含一个统一音频生成框架的**训练、诊断与推理代码**——该框架用单个流匹配(Flow
-Matching)主干同时实现**文本转语音(TTS)**与**文本转音频(TTA)**合成;此外还包含论文中
-提出的可解释性工具集(**BiT-C / LASP / FoG-A**)以及 **AG-REPA** 训练策略。
+一个统一的音频生成框架,用**单个流匹配(Flow Matching)主干**同时实现**文本转语音(TTS)**
+与**文本转音频(TTA)**。本仓库包含其**训练、诊断与推理代码**,以及论文提出的可解释性工具集
+(**BiT-C / LASP / FoG-A**)和 **AG-REPA** 训练策略。
 
-预训练权重与诊断产物发布在 Hugging Face:
-**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**。本 GitHub 仓库
-**仅含代码**——不包含任何检查点或数据集。(冻结的第三方基础模型 —— BEATs、CosyVoice ——
-需从各自原始来源下载,详见模型卡。)
+> **一句话理解:** 标准 REPA 对齐的是"信息**存得最多**"的层;AG-REPA 转而对齐"**真正驱动
+> 输出**"的层——这些层由一个因果探针自动找出——从而把 Fréchet 音频距离(FAD)相比最优固定层
+> REPA 基线降低 **18%(语音)/ 16%(音频)**。
+
+> ℹ️ **本仓库仅含代码**——不含任何检查点或数据集。预训练权重与诊断产物在 Hugging Face:
+> **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**。冻结的第三方基础
+> 模型(BEATs、CosyVoice)需从各自原始来源下载,详见模型卡。
 
 ---
 
 ## 🔊 音频示例 —— AG-REPA 使用前后对比(单主码本,仅 1 个 Epoch)
 
-为了让 AG-REPA 的效果"听得见",下面的音频均由**仅训练 1 个 Epoch**、且**只用单个主码本**
-(配置 A)的模型合成——一个**不用** AG-REPA(基线),一个**使用** AG-REPA,其余设置完全相同。
-仅一个 Epoch 后,AG-REPA 模型就已经能合成明显更清晰、更稳定的音频,而基线仍嘈杂、欠收敛
-——直观体现 AG-REPA **加速训练、稳定音质**的作用。
+为了让效果"听得见",下面的音频均由**仅训练 1 个 Epoch**、且**只用单个主码本**(配置 A)的
+模型合成——一个**不用** AG-REPA(基线),一个**使用** AG-REPA,其余设置完全相同。仅一个
+Epoch 后,AG-REPA 模型就已能合成明显更清晰、更稳定的音频,而基线仍嘈杂、欠收敛——直观体现
+AG-REPA **加速训练、稳定音质**的作用。
 
 **🗣️ TTS —— 零样本语音**
 
@@ -57,23 +59,54 @@ https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
 
 ---
 
+## ⚡ 快速上手(三步跑通推理)
+
+用已发布的 AG-REPA 权重生成音频。若想**从头训练**,请直接看
+[§5 安装](#5-安装) → [§7 训练流程](#7-训练流程)。
+
+```bash
+# 1) 环境
+conda create -n agrepa python=3.10 -y && conda activate agrepa
+pip install -r requirements.txt
+
+# 2) 下载权重,并接入某个变体目录(完整映射见 §9)
+hf download AustinZhang/AG-REPA --local-dir AG-REPA-Model
+cd Fusion_single_codebook
+ln -s /path/to/pretrained_base_models pretrained_models          # BEATs + CosyVoice,详见模型卡
+mkdir -p checkpoints
+ln -s /path/to/AG-REPA-Model/flow_matching/agrepa_single_codebook checkpoints/flow
+
+# 3) 合成(零样本 TTS,从参考片段克隆音色)
+python inference_tts.py \
+    --text "This is a classic line from Blade Runner." \
+    --prompt_wav ./wav/english_male.flac \
+    --checkpoint_dir ./checkpoints/flow \
+    --cosyvoice_model_dir ./pretrained_models/CosyVoice-300M \
+    --output ./output/generated_tts.wav --speed 0.9 --gpu_id 0
+```
+
+**第一次接触?** 先读 [§1](#1-ag-repa-要解决什么问题) 了解 *AG-REPA 在做什么*,看
+[§4](#4-仓库结构四个变体) *选对变体*,再看 [§8](#8-推理)–[§9](#9-将模型权重与代码对接)
+了解完整的推理与权重接入细节。
+
+---
+
 ## 1. AG-REPA 要解决什么问题?
 
-表征对齐(REPresentation Alignment,REPA)通过将生成式流匹配(FM)模型的中间隐藏状态与
-冻结的预训练教师特征对齐,从而加速训练。然而其效果高度依赖于**对齐发生在哪些层**——以往
-工作往往凭**启发式**做出选择(例如"总是对齐中间层 / 第 8 层")。
+表征对齐(REPresentation Alignment,REPA)通过将流匹配(FM)生成模型的中间隐藏状态与冻结的
+预训练教师特征对齐来加速训练。但它只有在对齐**正确的层**时才有效——而以往工作往往凭**启发式**
+做出选择(例如"总是对齐中间层 / 第 8 层")。
 
-论文表明,对于**以 token 为条件的音频 FM** 而言,这种启发式选择是"打偏了"的,原因是一个被
-我们称为 **存储—贡献分离(Store–Contribute Dissociation,SCD)** 的现象:
+论文表明,对于**以 token 为条件的音频 FM**,这种启发式选择是"打偏了"的,原因是一个被我们称为
+**存储—贡献分离(Store–Contribute Dissociation,SCD)** 的现象:
 
-* **存储(网络"知道"什么)。** 深层(L20–L24)携带最丰富的语义/声学信息(与教师空间的
-  相似度高)。
-* **贡献(网络实际"用"了什么)。** 浅层(L1–L3),以及一个中段过渡带(在扩散时间 *t≈0.5*
-  附近的 L6–L12),才是真正驱动预测速度场的层。
+* **存储——网络"知道"什么。** 深层(L20–L24)携带最丰富的语义/声学信息(与教师空间的相似度高)。
+* **贡献——网络实际"用"了什么。** 浅层(L1–L3),以及一个中段过渡带(在扩散时间 *t≈0.5* 附近
+  的 L6–L12),才是真正驱动预测速度场的层。
 
-这两组层**并不重合**。因此,对齐信息丰富的深层(标准 REPA)实际上监督的是"表征丰富却在
-功能上被动"的层。**AG-REPA** 转而将对齐施加到**因果上占主导地位**的层上——这些层由一个
-仅前向(forward-only)的因果归因探针自动识别。
+这两组层**并不重合**。因此,对齐信息丰富的深层(标准 REPA)实际监督的是"表征丰富却在功能上
+被动"的层。**AG-REPA** 转而把对齐施加到**因果上占主导**的层上——这些层由一个仅前向
+(forward-only)的因果归因探针自动识别。
 
 **结果:** 相比最优的固定层 REPA 基线,AG-REPA 将 Fréchet 音频距离(FAD)降低了
 **18%(语音)** 与 **16%(音频)**,且可迁移到 Voicebox、CosyVoice、F5-TTS 等架构。
@@ -93,8 +126,8 @@ https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
 </p>
 <p align="center"><sub><b>诊断表征存储。</b>(a)<b>BiT-C</b> 将条件接口锚定到冻结的 <b>Whisper</b>(语义)与 <b>BEATs</b>(声学)教师;(b)<b>LASP</b> 通过把每一层投影到共享教师空间并度量余弦相似度,探查"每一层知道什么"。</sub></p>
 
-随后,**AG-REPA**(i)按 FoG-A 因果归因排序,选出 **Top-K** 层;(ii)为每个被选中的层
-挂接一个轻量级逐层 MLP 投影头,并赋予**与归因成正比的权重** `λ_k ∝ FoG-A_k`,只在因果上
+随后,**AG-REPA**(i)按 FoG-A 因果归因对各层排序,保留 **Top-K** 层;(ii)为每个被选中的层
+挂接一个轻量级逐层 MLP 投影头,并赋予**与归因成正比的权重** `λ_k ∝ FoG-A_k`——只在因果上
 真正重要的位置施加对齐损失。本发布中 `K = 3`,探针选出的层为:
 
 * **语音(Whisper 教师):** 层 **L1、L9、L5** → `λ ≈ {0.334, 0.139, 0.118}`
@@ -147,22 +180,22 @@ https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
 
 ## 4. 仓库结构——四个变体
 
-本发布提供**四个自包含的变体**。它们沿两个维度区分:
+本发布提供**四个自包含的变体**,沿两个维度区分:
 
 |                | **基线 + 诊断**(`Fusion_*`) | **AG-REPA 训练**(`REPA_*`) |
 |----------------|------------------------------------------|----------------------------------|
 | **单码本**(配置 A:S³ + AudioSet token) | `Fusion_single_codebook/` | `REPA_single_codebook/` |
 | **双码本**(配置 B:配置 A **+ 交织的 BEATs** token) | `Fusion_dual_codebook/` | `REPA_dual_codebook/` |
 
-* **`Fusion_*`(诊断 / 第一阶段模型)。** 用标准目标训练 FM 模型,同时运行**可解释性探针**
+* **`Fusion_*` —— 诊断 / 第一阶段模型。** 用标准目标训练 FM 模型,同时运行**可解释性探针**
   (`models.py` 中的 `LayerProbeLogger`、`fog_attribution`、`probe_layers`)。它产出可复现
-  论文 **图 1 / 表 1** 的逐层归因 CSV 与热力图。该运行同时充当*无对齐基线*。
+  论文 **图 1 / 表 1** 的逐层归因 CSV 与热力图,同时充当*无对齐基线*。
   > "Fusion" = 携带**融合可解释性工具集**(BiT-C + LASP + FoG-A)的模型。模型发布包中的
   > 终端截图 `COS_FOG.png` 即为它的 Top-3 输出。
 
-* **`REPA_*`(第二阶段模型)。** 从相同的预热后状态出发,在 FoG-A 选出的层上施加**归因引导
-  的 REPA** 层内旁路对齐(见 §2)。AG-REPA **只修改流匹配阶段**——阶段 1 的 LLM 与对应码本
-  配置的 `Fusion_*` 共享。
+* **`REPA_*` —— 第二阶段模型。** 从相同的预热后状态出发,在 FoG-A 选出的层上施加**归因引导的
+  REPA** 层内旁路对齐(见 §2)。AG-REPA **只修改流匹配阶段**——阶段 1 的 LLM 与对应码本配置的
+  `Fusion_*` 共享。
 
 * **`single` 与 `dual` 码本。** 双码本变体在每个主 token 后交织一个稠密的 BEATs token
   (`s = [t1, b1, t2, b2, …]`,公式 15),构造出更接近目标声学流形的代理流形。
@@ -184,12 +217,12 @@ https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
 | `train_cfm.py` | 阶段 2:训练 DiT 流匹配模型。`Fusion_*` 内嵌探针记录器;`REPA_*` 运行 AG-REPA 训练。 |
 | `utils.py` | 配置加载 + 音频峰值归一化工具。*(各变体一致)* |
 | `ds_config_{ast,cfm,llm}.json` | 各训练阶段的 DeepSpeed ZeRO-1 配置。 |
-| `cosyvoice/`、`beats/`、`repcodec/` | 内置(vendored)的第三方编码器/分词器(见 §10)。 |
+| `cosyvoice/`、`beats/`、`repcodec/` | 内置(vendored)的第三方编码器/分词器(见 §12)。 |
 | `wav/` | 少量小体积参考音频,用于推理演示。 |
 | `inference_tts.py`、`inference_tta.py` | **(仅 `Fusion_single_codebook/`)** 端到端 TTS / TTA 推理。 |
 | `generate_descriptions.py` | **(仅 `REPA_single_codebook/`)** 用 MiDashengLM-7B 为 AudioSet 片段自动生成字幕 → `audioset_description.jsonl`(TTA 文本条件)。 |
 
-> 四个变体共享大量代码。`train_ast.py`、`data_loader.py`、`utils.py` 以及内置库在四个变体间
+> 四个变体共享大量代码:`train_ast.py`、`data_loader.py`、`utils.py` 以及内置库在四个变体间
 > **逐字节一致**;`models.py`、`train_cfm.py`、`train_llm.py` 与 `config.yaml` 在各变体间不同。
 
 ---
@@ -208,15 +241,15 @@ pip install -r requirements.txt
 # (https://www.modelscope.cn/models/iic/CosyVoice-ttsfrd)。
 ```
 
-随后准备好预训练权重——从 Hugging Face 模型仓库
-**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)** 下载,并按下文 §9 接入。
+随后从 Hugging Face 模型仓库 **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**
+下载预训练权重,并按下文 §9 接入。
 
 ---
 
 ## 6. 数据准备
 
-模型在 **LibriSpeech**(语音,960 小时)+ **AudioSet**(通用音频)上训练,遵循统一音频生成
-设定。先在 `config.yaml` 中设置数据集根目录(`data.librispeech.*`、`data.audioset.*`),然后:
+模型在 **LibriSpeech**(语音,960 小时)+ **AudioSet**(通用音频)上训练。先在 `config.yaml`
+中设置数据集根目录(`data.librispeech.*`、`data.audioset.*`),然后:
 
 ```bash
 cd REPA_single_codebook            # 或任意变体
@@ -236,7 +269,7 @@ python generate_descriptions.py
 
 ## 7. 训练流程
 
-所有训练阶段均通过 **DeepSpeed**(ZeRO-1)启动。每个阶段从 `config.yaml` 和对应的
+所有训练阶段均通过 **DeepSpeed**(ZeRO-1)启动,并从 `config.yaml` 和对应的
 `ds_config_*.json` 读取超参数。
 
 ```bash

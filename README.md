@@ -1,35 +1,36 @@
 # AG-REPA: Attribution-Guided Representation Alignment for Audio Flow Matching
 
-> Official code release for the paper
+> Official code for the paper
 > **"AG-REPA: Causal Layer Selection for Representation Alignment in Audio Flow Matching"**
-> *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.*
-> Proceedings of the International Conference on Machine Learning (ICML) 2026.
+> *Pengfei Zhang, Tianxin Xie, Minghao Yang, Li Liu.* — ICML 2026.
 
 > 📄 **Paper & poster:** [ICML 2026 Virtual](https://icml.cc/virtual/2026/poster/65899)
 > &nbsp;|&nbsp; 🌐 **Language:** English | [简体中文](README.zh-CN.md)
 
-This repository contains the **training, diagnostic, and inference code** for a unified
-audio-generation framework that performs both **Text-to-Speech (TTS)** and
-**Text-to-Audio (TTA)** synthesis with a single Flow-Matching backbone, together with the
-interpretability toolkit (**BiT-C / LASP / FoG-A**) and the **AG-REPA** training strategy
-introduced in the paper.
+A unified audio-generation framework that does both **Text-to-Speech (TTS)** and
+**Text-to-Audio (TTA)** with a single Flow-Matching backbone. This repo holds the
+**training, diagnostic, and inference code**, plus the interpretability toolkit
+(**BiT-C / LASP / FoG-A**) and the **AG-REPA** training strategy from the paper.
 
-The pre-trained weights and diagnostic artifacts are released on Hugging Face:
-**[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**. This GitHub
-repository is *code only* — no checkpoints or datasets are included. (The frozen
-third-party base models — BEATs, CosyVoice — are downloaded from their original sources;
-see the model card.)
+**The idea in one line:** standard REPA aligns the layers that *store* the most
+information; AG-REPA aligns the layers that *actually drive* the output — found
+automatically by a causal probe — cutting Fréchet Audio Distance by
+**18 % (speech) / 16 % (audio)** over the best fixed-layer REPA baseline.
+
+> ℹ️ **This repo is code only** — no checkpoints or datasets. Pre-trained weights and
+> diagnostic artifacts are on Hugging Face: **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**.
+> The frozen base models (BEATs, CosyVoice) are downloaded from their original sources — see the model card.
 
 ---
 
 ## 🔊 Audio samples — AG-REPA vs. baseline (single codebook, 1 epoch)
 
-To make AG-REPA's effect audible, the clips below were synthesized by models trained for
-**only a single epoch** on the **single main codebook** (Config A) — one *without* AG-REPA
-(the baseline) and one *with* AG-REPA, with everything else held identical. After just one
-epoch the AG-REPA model already produces noticeably clearer, more stable audio, while the
-baseline is still noisy and under-converged — a direct, audible illustration of AG-REPA
-**accelerating training and stabilising output quality**.
+To make the effect *audible*, the clips below come from two models trained for **just one
+epoch** on the **single main codebook** (Config A) — one **without** AG-REPA (baseline) and
+one **with** it, everything else identical. After a single epoch the AG-REPA model is
+already clearly cleaner and more stable, while the baseline is still noisy and
+under-converged — a direct, audible sign that AG-REPA **speeds up training and stabilises
+quality**.
 
 **🗣️ TTS — zero-shot speech**
 
@@ -51,41 +52,72 @@ https://github.com/user-attachments/assets/10fa3c94-8f70-4f89-a20b-13c734e6b1d3
 
 https://github.com/user-attachments/assets/04c1daf8-a976-4732-b3d0-0698b77f0e1b
 
-> ▶ The clips above play **inline on this page** — just press play, no download. They are
-> **one-epoch, single-codebook** samples showing *early-training* convergence (not final
-> quality): even after a single epoch, AG-REPA is already clearly cleaner and more stable
-> than the baseline. Lossless WAV copies: TTS
-> [baseline](assets/audio/tts_no_agrepa.wav) / [AG-REPA](assets/audio/tts_agrepa.wav) ·
+> ▶ The clips play **inline** — just press play, no download. They are **one-epoch,
+> single-codebook** samples showing *early-training* convergence (not final quality): even
+> after one epoch AG-REPA is already cleaner and more stable than the baseline. Lossless
+> WAVs: TTS [baseline](assets/audio/tts_no_agrepa.wav) / [AG-REPA](assets/audio/tts_agrepa.wav) ·
 > TTA [baseline](assets/audio/tta_no_agrepa.wav) / [AG-REPA](assets/audio/tta_agrepa.wav).
 > Fully-trained quality: [paper](https://icml.cc/virtual/2026/poster/65899) ·
 > [🤗 model card](https://huggingface.co/AustinZhang/AG-REPA).
 
 ---
 
+## ⚡ Quick start (inference in 3 steps)
+
+Generate audio with the released AG-REPA weights. To train from scratch instead, jump to
+[§5 Installation](#5-installation) → [§7 Training](#7-training-pipeline).
+
+```bash
+# 1) Environment
+conda create -n agrepa python=3.10 -y && conda activate agrepa
+pip install -r requirements.txt
+
+# 2) Download the weights and wire them into a variant directory (full map in §9)
+hf download AustinZhang/AG-REPA --local-dir AG-REPA-Model
+cd Fusion_single_codebook
+ln -s /path/to/pretrained_base_models pretrained_models          # BEATs + CosyVoice, see model card
+mkdir -p checkpoints
+ln -s /path/to/AG-REPA-Model/flow_matching/agrepa_single_codebook checkpoints/flow
+
+# 3) Synthesize (zero-shot TTS, voice cloned from a reference clip)
+python inference_tts.py \
+    --text "This is a classic line from Blade Runner." \
+    --prompt_wav ./wav/english_male.flac \
+    --checkpoint_dir ./checkpoints/flow \
+    --cosyvoice_model_dir ./pretrained_models/CosyVoice-300M \
+    --output ./output/generated_tts.wav --speed 0.9 --gpu_id 0
+```
+
+**New here?** Read [§1](#1-what-problem-does-ag-repa-solve) for *what AG-REPA does*,
+[§4](#4-repository-layout--the-four-variants) to *pick the right variant*, and
+[§8](#8-inference)–[§9](#9-wiring-the-model-weights-to-the-code) for the full inference and
+weight-wiring details.
+
+---
+
 ## 1. What problem does AG-REPA solve?
 
-REPresentation Alignment (REPA) accelerates the training of generative Flow-Matching (FM)
-models by aligning a network's intermediate hidden states with frozen pretrained teacher
-features. Its effectiveness, however, hinges on **which layers** receive the alignment
-supervision — a choice that prior work makes *heuristically* (e.g. "always align the
-mid-block / layer 8").
+REPresentation Alignment (REPA) speeds up training of Flow-Matching (FM) generative models
+by aligning a network's intermediate hidden states with frozen pretrained teacher features.
+But it only works if you align the **right layers** — and prior work picks them
+*heuristically* (e.g. "always align the mid-block / layer 8").
 
-The paper shows that for **token-conditioned audio FM** this heuristic is mis-targeted,
-because of a phenomenon we call the **Store–Contribute Dissociation (SCD)**:
+The paper shows this heuristic is mis-targeted for **token-conditioned audio FM**, because
+of what we call **Store–Contribute Dissociation (SCD)**:
 
-* **Storage (what the network *knows*).** Deep layers (L20–L24) carry the richest
-  semantic/acoustic information (high teacher-space similarity).
-* **Contribution (what the network *uses*).** Shallow layers (L1–L3) and a mid-phase
-  transition band (L6–L12 around diffusion time *t≈0.5*) are the ones that actually drive
-  the predicted velocity field.
+* **Storage — what the network *knows*.** Deep layers (L20–L24) hold the richest
+  semantic/acoustic information (high similarity to the teacher).
+* **Contribution — what the network *uses*.** Shallow layers (L1–L3) and a mid-phase band
+  (L6–L12, around diffusion time *t≈0.5*) are what actually drive the predicted velocity
+  field.
 
-These two sets **do not coincide**. Aligning the information-rich deep layers (standard
-REPA) therefore supervises layers that are "representationally rich but functionally
-passive." **AG-REPA** instead applies alignment to the *causally dominant* layers,
-identified automatically by a forward-only causal-attribution probe.
+These two sets **don't overlap**. So aligning the information-rich deep layers (standard
+REPA) ends up supervising layers that are "rich but functionally passive." **AG-REPA**
+instead aligns the *causally dominant* layers, picked automatically by a forward-only
+causal-attribution probe.
 
-**Result:** AG-REPA reduces Fréchet Audio Distance (FAD) by **18 % (speech)** and
-**16 % (audio)** over the best fixed-layer REPA baseline, and transfers across Voicebox,
+**Result:** AG-REPA cuts Fréchet Audio Distance (FAD) by **18 % (speech)** and
+**16 % (audio)** vs. the best fixed-layer REPA baseline, and transfers across Voicebox,
 CosyVoice, and F5-TTS architectures.
 
 ---
@@ -103,10 +135,10 @@ CosyVoice, and F5-TTS architectures.
 </p>
 <p align="center"><sub><b>Diagnosing representation storage.</b> (a) <b>BiT-C</b> anchors the conditioning interface to frozen <b>Whisper</b> (semantic) and <b>BEATs</b> (acoustic) teachers; (b) <b>LASP</b> probes "what each layer knows" by projecting every layer into a shared teacher space and measuring cosine similarity.</sub></p>
 
-**AG-REPA** then (i) selects the **Top-K** layers ranked by FoG-A causal attribution and
+**AG-REPA** then (i) ranks layers by FoG-A causal attribution and keeps the **Top-K**, and
 (ii) attaches a lightweight per-layer MLP projection head with an
-**attribution-proportional weight** `λ_k ∝ FoG-A_k`, applying the alignment loss only
-where it causally matters. In this release `K = 3`, with the layers found by the probe:
+**attribution-proportional weight** `λ_k ∝ FoG-A_k` — so the alignment loss is applied only
+where it causally matters. Here `K = 3`; the probe-selected layers are:
 
 * **Speech (Whisper teacher):** layers **L1, L9, L5** → `λ ≈ {0.334, 0.139, 0.118}`
 * **Audio (BEATs teacher):** layers **L1, L21, L9** → `λ ≈ {0.278, 0.120, 0.112}`
@@ -123,8 +155,8 @@ where it causally matters. In this release `K = 3`, with the layers found by the
 
 ## 3. System architecture
 
-A two-stage cascade decouples high-level semantic planning from low-level acoustic
-rendering (Appendix A of the paper):
+A two-stage cascade splits high-level semantic planning from low-level acoustic rendering
+(Appendix A of the paper):
 
 <p align="center">
   <img src="assets/framework.png" width="100%" alt="The unified audio generation framework: tokenization, Stage-1 autoregressive LLM, and Stage-2 Flow Matching">
@@ -161,31 +193,31 @@ The same pipeline as a text schematic:
 
 ## 4. Repository layout — the four variants
 
-The release ships **four self-contained variants**. They differ along two axes:
+The release ships **four self-contained variants**, differing along two axes:
 
 |                | **Baseline + diagnostics** (`Fusion_*`) | **AG-REPA training** (`REPA_*`) |
 |----------------|------------------------------------------|----------------------------------|
 | **Single codebook** (Config A: S³ + AudioSet tokens) | `Fusion_single_codebook/` | `REPA_single_codebook/` |
 | **Dual codebook** (Config B: Config A **+ interleaved BEATs** tokens) | `Fusion_dual_codebook/` | `REPA_dual_codebook/` |
 
-* **`Fusion_*` (the diagnostic / Phase-I model).** Trains the FM model with the standard
+* **`Fusion_*` — the diagnostic / Phase-I model.** Trains the FM model with the standard
   objective while running the **interpretability probes** (`LayerProbeLogger`,
-  `fog_attribution`, `probe_layers` in `models.py`). It produces the layer-attribution
-  CSVs and heat-maps that reproduce **Figure 1 / Table 1** of the paper. This run also
-  serves as the *no-alignment baseline*.
+  `fog_attribution`, `probe_layers` in `models.py`). It produces the layer-attribution CSVs
+  and heat-maps that reproduce **Figure 1 / Table 1** of the paper, and doubles as the
+  *no-alignment baseline*.
   > "Fusion" = the model carrying the **fused interpretability toolkit** (BiT-C + LASP +
   > FoG-A). The terminal capture `COS_FOG.png` in the model release is its Top-3 output.
 
-* **`REPA_*` (the Phase-II model).** Starting from the same post-warm-up state, applies the
+* **`REPA_*` — the Phase-II model.** Starting from the same post-warm-up state, it applies
   **attribution-guided REPA** intra-layer bypass alignment at the FoG-A-selected layers
-  (see §2). AG-REPA modifies **only the Flow-Matching stage** — the Stage-1 LLM is shared
+  (see §2). AG-REPA touches **only the Flow-Matching stage** — the Stage-1 LLM is shared
   with the corresponding `Fusion_*` codebook config.
 
-* **`single` vs `dual` codebook.** The dual-codebook variants interleave a dense BEATs
-  token after every primary token (`s = [t1, b1, t2, b2, …]`, Equation 15), creating a
-  proxy manifold closer to the target acoustic manifold.
+* **`single` vs `dual` codebook.** The dual-codebook variants interleave a dense BEATs token
+  after every primary token (`s = [t1, b1, t2, b2, …]`, Equation 15), giving a proxy
+  manifold closer to the target acoustic manifold.
 
-This matches the paper's strict **probe-then-intervene** protocol (Appendix A.5):
+This follows the paper's strict **probe-then-intervene** protocol (Appendix A.5):
 *Phase I (`Fusion_*`)* computes and freezes the Top-K causal layer set; *Phase II
 (`REPA_*`)* trains with alignment applied only to those layers.
 
@@ -202,14 +234,14 @@ This matches the paper's strict **probe-then-intervene** protocol (Appendix A.5)
 | `train_cfm.py` | Stage-2: trains the DiT Flow-Matching model. `Fusion_*` embeds the probe logger; `REPA_*` runs AG-REPA training. |
 | `utils.py` | Config loading + audio peak-normalisation helpers. *(identical across variants)* |
 | `ds_config_{ast,cfm,llm}.json` | DeepSpeed ZeRO-1 configs for each training stage. |
-| `cosyvoice/`, `beats/`, `repcodec/` | Vendored third-party encoders/tokenizers (see §10). |
+| `cosyvoice/`, `beats/`, `repcodec/` | Vendored third-party encoders/tokenizers (see §12). |
 | `wav/` | A handful of small reference-audio clips for inference demos. |
 | `inference_tts.py`, `inference_tta.py` | **(`Fusion_single_codebook/` only)** End-to-end TTS / TTA inference. |
 | `generate_descriptions.py` | **(`REPA_single_codebook/` only)** Auto-captions AudioSet clips with MiDashengLM-7B → `audioset_description.jsonl` (TTA text conditioning). |
 
-> The four variants share a large amount of code. `train_ast.py`, `data_loader.py`,
-> `utils.py` and the vendored libraries are byte-identical across all four;
-> `models.py`, `train_cfm.py`, `train_llm.py` and `config.yaml` differ per variant.
+> The four variants share a lot of code: `train_ast.py`, `data_loader.py`, `utils.py` and
+> the vendored libraries are byte-identical across all four; `models.py`, `train_cfm.py`,
+> `train_llm.py` and `config.yaml` differ per variant.
 
 ---
 
@@ -227,17 +259,15 @@ pip install -r requirements.txt
 # (https://www.modelscope.cn/models/iic/CosyVoice-ttsfrd).
 ```
 
-Then make the pre-trained weights available — download them from the Hugging Face model
-repo **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)** and wire them
-in per §9 below.
+Then get the pre-trained weights from **[🤗 AustinZhang/AG-REPA](https://huggingface.co/AustinZhang/AG-REPA)**
+and wire them in per §9.
 
 ---
 
 ## 6. Data preparation
 
-The models are trained on **LibriSpeech** (speech, 960 h) + **AudioSet** (general audio),
-following the unified-audio-generation setup. Set the dataset roots in `config.yaml`
-(`data.librispeech.*`, `data.audioset.*`), then:
+The models train on **LibriSpeech** (speech, 960 h) + **AudioSet** (general audio). Set the
+dataset roots in `config.yaml` (`data.librispeech.*`, `data.audioset.*`), then:
 
 ```bash
 cd REPA_single_codebook            # or any variant
@@ -257,8 +287,8 @@ python generate_descriptions.py
 
 ## 7. Training pipeline
 
-All training stages are launched with **DeepSpeed** (ZeRO-1). Each stage reads
-hyper-parameters from `config.yaml` and the matching `ds_config_*.json`.
+Every stage is launched with **DeepSpeed** (ZeRO-1) and reads its hyper-parameters from
+`config.yaml` and the matching `ds_config_*.json`.
 
 ```bash
 cd REPA_single_codebook            # pick the variant you want to train
@@ -275,8 +305,8 @@ deepspeed train_llm.py --config config.yaml
 deepspeed train_cfm.py --config config.yaml
 ```
 
-Checkpoints are written under `checkpoints/{ast,llm,flow}/` and validation/visualisation
-samples under `outputs_cfm/`.
+Checkpoints land under `checkpoints/{ast,llm,flow}/`, and validation/visualisation samples
+under `outputs_cfm/`.
 
 ### Reproducing the diagnostics (Figure 1 & Table 1)
 
@@ -326,8 +356,8 @@ python inference_tta.py \
 ## 9. Wiring the model weights to the code
 
 Download the weights from Hugging Face (`hf download AustinZhang/AG-REPA --local-dir
-AG-REPA-Model`) and download the base models from their upstream sources. The code expects,
-**per variant directory**, the following sub-folders — symlink or copy them in:
+AG-REPA-Model`) and the base models from their upstream sources. Each variant directory
+expects these sub-folders — symlink or copy them in:
 
 ```
 <variant>/
@@ -406,10 +436,10 @@ The AG-REPA-specific code in this repository is released under the **MIT License
 [`LICENSE`](LICENSE).
 
 The vendored third-party components (`cosyvoice/`, `beats/`, `repcodec/`) and the referenced
-base models retain their **own original licenses**; please consult the upstream repositories
+base models keep their **own original licenses**; please check the upstream repositories
 linked above before redistribution or commercial use.
 
 As noted in the paper's Impact Statement, high-fidelity audio generation and voice cloning
 carry risks (deepfakes, impersonation, voice spoofing). Responsible deployment should
-incorporate audio watermarking, spoofing detection, and restricted access to voice-cloning
+include audio watermarking, spoofing detection, and restricted access to voice-cloning
 capabilities.
